@@ -14,8 +14,7 @@ const COOK_POSITIONS: Record<CookingStage, [number, number, CoordinateShiftCoeff
 };
 
 const cooksImages: Partial<Record<CookingStage, HTMLImageElement>> = {};
-let iceImage: HTMLImageElement, catImageRight: HTMLImageElement,
-  catImageLeft: HTMLImageElement, catImageBack: HTMLImageElement;
+let iceImage: HTMLImageElement, catImageRight: HTMLImageElement, catImageBack: HTMLImageElement;
 
 const rightStages = ['Baking', 'Packaging'];
 const leftStages = ['Completed', 'Waiting', 'Dough'];
@@ -35,7 +34,7 @@ const loadCookImages = async () => {
   cooksImages.Completed = restingCook;
   cooksImages.Waiting = restingCook;
   catImageRight = await loadImage('/images/cat-right.png');
-  catImageLeft = await loadImage('/images/cat-left.png');
+  // cat-left.png removed from runtime usage; we mirror cat-right sprite instead
   catImageBack = await loadImage('/images/cat-back.png');
   iceImage = await loadImage('/images/ice.png');
 };
@@ -174,26 +173,35 @@ function findFreePlace(cooks: CanvasCook[], stage: CookingStage): [number, numbe
 function handleCatSkin(ctx: CanvasRenderingContext2D, x: number, y: number, currentStage: CookingStage) {
   const scale = 0.225;
 
-  const drawCat = (img: HTMLImageElement, isBack?: boolean) => {
-    const imgWidth = img.width * (scale - (isBack ? 0.05 : 0));
+  const drawCat = (img: HTMLImageElement, opts?: { back?: boolean; flipX?: boolean }) => {
+    const imgWidth = img.width * (scale - (opts?.back ? 0.05 : 0));
     const imgHeight = img.height * scale;
+
+    ctx.save();
+    if (opts?.flipX) {
+      // Mirror horizontally around the cat's center point
+      ctx.translate(x * 2, 0); // move origin so scaling flips around x
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(img, x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
+    ctx.restore();
+
     ctx.fillStyle = '#000000';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const label = `A cat (#${CAT_ID})`;
-
     ctx.fillText(label, x, y - img.height / 2 - 10);
   };
 
   if (rightStages.includes(currentStage) && catImageRight) {
     drawCat(catImageRight);
   }
-  if (leftStages.includes(currentStage) && catImageLeft) {
-    drawCat(catImageLeft);
+  if (leftStages.includes(currentStage) && catImageRight) {
+    // Mirror right-facing cat instead of loading a separate left sprite
+    drawCat(catImageRight, { flipX: true });
   }
   if (backStages.includes(currentStage) && catImageBack) {
-    drawCat(catImageBack, true);
+    drawCat(catImageBack, { back: true });
   }
 }
